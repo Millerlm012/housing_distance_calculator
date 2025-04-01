@@ -18,6 +18,11 @@ def distance_matrix(addresses, destination_addresses, key):
     You can only pass a max of 25 origins or 25 destinations to the Distance Matrix API.
     We will batch the addresses and raise an error if destinations exceeds limit.
     """
+    if len(addresses) == 0:
+        raise ValueError("Provided list of addresses cannot be empty.")
+
+    if len(destination_addresses) == 0:
+        raise ValueError("Provided list of destination addresses cannot be empty.")
 
     BATCH_LIMIT = 25
     if len(destination_addresses) > BATCH_LIMIT:
@@ -39,7 +44,13 @@ def distance_matrix(addresses, destination_addresses, key):
 
         if rsp.status_code != 200 or data["status"] != "OK":
             raise ValueError(
-                f"Distance Matrix API request failed. \nStatus Code: {rsp.status_code}\nResponse Status: {data['status']}\nError: {rsp.text}"
+                f"""Distance Matrix API request failed.
+URL: {url}
+Status Code: {rsp.status_code}
+Response Status: {data['status']}
+Error: {rsp.text}
+Origins: {origins}
+Destinations: {destinations}"""
             )
 
         all_rows += data["rows"]
