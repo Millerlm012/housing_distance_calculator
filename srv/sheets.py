@@ -6,7 +6,7 @@ class Client:
     def __init__(self):
         self.spreadsheet_id = "1g-9_xtC0OARsYJ7QhIiEOglvGtcJD3rFUyd5igFqc1I"
         self.scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-        self.origin_range = "Homes!A2:U"
+        self.origin_range = "Homes!A2:V"
         self.destination_range = "Destination Addresses!B1:B"
         self.sheet_batch_update_payload = []
         self.init_service()
@@ -27,15 +27,17 @@ class Client:
         values = result.get("values", [])
 
         addresses = []
+        number_of_non_distance_columns = 11
         for i, row in enumerate(values):
             if (
-                len(row) <= 11
+                len(row) <= number_of_non_distance_columns
             ):  # if less than 11 columns, it's missing the distance calculations
                 row_to_update = i + 2
                 self.sheet_batch_update_payload.append(
                     {"range": f"Homes!L{row_to_update}:U{row_to_update}"}
                 )  # adding ranges to update for import_distances()
-                addresses.append(row[2])
+                address_col = row[2]
+                addresses.append(address_col)
 
         return addresses
 
@@ -49,7 +51,8 @@ class Client:
 
         addresses = []
         for row in values:
-            addresses.append(row[0])
+            address_col = row[0]
+            addresses.append(address_col)
 
         return addresses
 
