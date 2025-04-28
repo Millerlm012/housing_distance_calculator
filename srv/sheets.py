@@ -27,14 +27,14 @@ class Client:
         values = result.get("values", [])
 
         addresses = []
-        number_of_non_distance_columns = 11
+        number_of_non_distance_columns = 12
         for i, row in enumerate(values):
             if (
                 len(row) <= number_of_non_distance_columns
-            ):  # if less than 11 columns, it's missing the distance calculations
+            ):  # if less than number_of_non_distance_columns, it's missing the distance calculations
                 row_to_update = i + 2
                 self.sheet_batch_update_payload.append(
-                    {"range": f"Homes!L{row_to_update}:U{row_to_update}"}
+                    {"range": f"Homes!M{row_to_update}:V{row_to_update}"}
                 )  # adding ranges to update for import_distances()
                 address_col = row[2]
                 addresses.append(address_col)
