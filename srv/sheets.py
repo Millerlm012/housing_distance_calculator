@@ -82,7 +82,6 @@ class Client:
                 }
             )
 
-        print(sheet_batch_update_payload)
         self.sheet.values().batchUpdate(
             spreadsheetId=self.spreadsheet_id,
             body={"valueInputOption": "RAW", "data": sheet_batch_update_payload},
