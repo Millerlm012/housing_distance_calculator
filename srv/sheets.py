@@ -6,9 +6,10 @@ class Client:
     def __init__(self):
         self.spreadsheet_id = "1g-9_xtC0OARsYJ7QhIiEOglvGtcJD3rFUyd5igFqc1I"
         self.scopes = ["https://www.googleapis.com/auth/spreadsheets"]
-        self.origin_range = "Homes!A2:V"
+        self.address_range = "Homes!C2:C"
         self.destination_range = "Destination Addresses!B1:B"
-        self.sheet_batch_update_payload = []
+        self.address_distance_range = "Distances!A2:A"
+        self.distance_row_index = 0
         self.init_service()
 
     def init_service(self):
@@ -18,28 +19,35 @@ class Client:
         self.service = build("sheets", "v4", credentials=creds)
         self.sheet = self.service.spreadsheets()
 
-    def get_addresses(self):
+    def get_addresses_to_calculate_distance(self):
         result = (
             self.sheet.values()
-            .get(spreadsheetId=self.spreadsheet_id, range=self.origin_range)
+            .get(spreadsheetId=self.spreadsheet_id, range=self.address_range)
             .execute()
         )
-        values = result.get("values", [])
+        origin_addresses = [
+            address for row in result.get("values", []) for address in row
+        ]
 
-        addresses = []
-        number_of_non_distance_columns = 12
-        for i, row in enumerate(values):
-            if (
-                len(row) <= number_of_non_distance_columns
-            ):  # if less than number_of_non_distance_columns, it's missing the distance calculations
-                row_to_update = i + 2
-                self.sheet_batch_update_payload.append(
-                    {"range": f"Homes!M{row_to_update}:V{row_to_update}"}
-                )  # adding ranges to update for import_distances()
-                address_col = row[2]
-                addresses.append(address_col)
+        result = (
+            self.sheet.values()
+            .get(spreadsheetId=self.spreadsheet_id, range=self.address_distance_range)
+            .execute()
+        )
+        calculated_addresses = [
+            address for row in result.get("values", []) for address in row
+        ]
 
-        return addresses
+        self.distance_row_index = (
+            len(calculated_addresses) + 1
+        )  # adding 2 to offset the header row
+
+        addresses_to_calculate_for = []
+        for address in origin_addresses:
+            if address not in calculated_addresses:
+                addresses_to_calculate_for.append(address)
+
+        return addresses_to_calculate_for
 
     def get_destination_addresses(self):
         result = (
@@ -56,16 +64,26 @@ class Client:
 
         return addresses
 
-    def import_distances(self, values):
+    def import_distances(self, addresses, values):
+        sheet_batch_update_payload = []
         for i, row in enumerate(values):
-            mapped_values = []
+            mapped_values = [addresses[i]]
             for val in row["elements"]:
                 mapped_values.append(val["distance"]["text"])
                 mapped_values.append(val["duration"]["text"])
 
-            self.sheet_batch_update_payload[i]["values"] = [mapped_values]
+            sheet_batch_update_payload.append(
+                {
+                    # distance_row_index is the index of where it's at before update
+                    # i is where we're at in our iteration of new rows
+                    # we add 1 to get to the index for our new row
+                    "range": f"Distances!A{self.distance_row_index + i + 1}:K{self.distance_row_index + i + 1}",
+                    "values": [mapped_values],
+                }
+            )
 
+        print(sheet_batch_update_payload)
         self.sheet.values().batchUpdate(
             spreadsheetId=self.spreadsheet_id,
-            body={"valueInputOption": "RAW", "data": self.sheet_batch_update_payload},
+            body={"valueInputOption": "RAW", "data": sheet_batch_update_payload},
         ).execute()
